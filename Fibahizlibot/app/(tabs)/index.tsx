@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -16,14 +16,53 @@ const ChatScreen = () => {
   const [inputText, setInputText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [messageIdCounter, setMessageIdCounter] = useState(1);
+  
+  useEffect(() => {
+    // Add hello message when the component mounts
+    setMessages([
+      { 
+        id: 0, 
+        text: "Merhaba! Size nasıl yardımcı olabilirim?", 
+        sender: 'system' 
+      }
+    ]);
+    setMessageIdCounter(1);
+  }, []);
 
-  const handleSend = (text) => {
+
+  const [response, setResponse] = useState('');
+
+    const sendRequest = async (text) => {
+        try {
+          const res = await fetch('http://127.0.0.1:5000/hello', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ queryText: text })
+          });
+
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+
+          const data = await res.json(); // Yanıtı JSON olarak al
+          console.log('Response data:', data); // Yanıtı konsola yazdırarak kontrol edelim
+          setResponse(data.message); // Mesajı state'e set et
+          return data.message;
+        } catch (error) {
+          console.error('Error:', error); // Hata mesajını konsola yazdır
+        }
+      };
+
+  const handleSend = async (text) => {
     if (text.trim() !== '') {
       let newMessages = [...messages];
       const newMessage = { id: messageIdCounter, text, sender: 'user' };
       setMessageIdCounter(prevId => prevId + 1);
       newMessages.push(newMessage);
-
+        /*newMessages.push({ id: messageIdCounter + 1, text: <Image source={require('../../temp_chart.png')} style={styles.image}/>, sender: 'system' });
+        setMessageIdCounter(prevId => prevId + 2);*/
       if (text === 'Fatura İşlemleri') {
         newMessages.push({
           id: messageIdCounter + 1,
@@ -33,7 +72,7 @@ const ChatScreen = () => {
           actionType: text,
         });
         setMessageIdCounter(prevId => prevId + 2);
-      } else if (text === 'Para Transferleri') {
+      }else if (text === 'Para Transferleri') {
         newMessages.push({
           id: messageIdCounter + 1,
           text: 'Para Transferi Seçenekleri:',
@@ -68,8 +107,33 @@ const ChatScreen = () => {
           actionType: text,
         });
         setMessageIdCounter(prevId => prevId + 2);
+      }
+      else if (text === 'İptal' || text === 'Iptal') {
+        newMessages.push({
+          id: messageIdCounter + 1,
+          text: 'Talebiniz iptal edilmiştir.',
+          sender: 'system',
+          actionType: text,
+        });
+        setMessageIdCounter(prevId => prevId + 2);
+      }
+       else if (text === 'Selam' || text === 'Merhaba') {
+        newMessages.push({
+          id: messageIdCounter + 1,
+          text: 'Selam! Ben Hızlı Bot! Size nasıl yardımcı olabilirim?',
+          sender: 'system',
+          actionType: text,
+        });
+        setMessageIdCounter(prevId => prevId + 2);
       } else {
-        newMessages.push({ id: messageIdCounter + 1, text: 'Automatic reply', sender: 'system' });
+        var res = await sendRequest(text);
+        if(res.includes(".png")){
+        res = "../../chatbot/"+res;
+            newMessages.push({ id: messageIdCounter + 1, text: <Image source={{uri: res }} style={styles.image}/>, sender: 'system' });
+        }
+        else{
+            newMessages.push({ id: messageIdCounter + 1, text: res, sender: 'system' });
+        }
         setMessageIdCounter(prevId => prevId + 2);
       }
 
@@ -210,7 +274,7 @@ const ChatScreen = () => {
       <View style={styles.inputArea}>
         <TouchableOpacity style={styles.circleButton} onPress={() => setModalVisible(true)} />
         <TextInput
-          style={styles.textInput}
+          style={styles.textInputOpacityLow}
           value={inputText}
           onChangeText={setInputText}
           placeholder="Ne yapmak istersiniz?"
@@ -284,6 +348,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     fontSize: 18,
   },
+  textInputOpacityLow: {
+      flex: 1,
+      height: 40,
+      borderColor: '#1c1c1c',
+      borderWidth: 1,
+      borderRadius: 20,
+      paddingLeft: 10,
+      marginRight: 10,
+      backgroundColor: '#fff',
+      fontSize: 18,
+    },
   sendButtonText: {
     fontSize: 24,
   },
@@ -363,6 +438,12 @@ const styles = StyleSheet.create({
   disabledQuickAction: {
     opacity: 0.5, // Opacity to indicate disabled state
   },
+    image: {
+      width: 800,
+      height: 600,
+      resizeMode:"contain",
+      marginTop: 10,
+    },
 });
 
 export default ChatScreen;
